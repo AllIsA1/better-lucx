@@ -35,11 +35,12 @@ func newMux(api panelAPI, f *fixer, c *customLinks) http.Handler {
 
 	mux := http.NewServeMux()
 	forms := newFormLinks(c)
+	names := newCsqttNames(api)
 	mux.Handle("POST /_lucx/seam/{mode}", SeamHandler(func(call SeamCall) (SeamReply, error) {
 		if call.Seam.Engine == "api" {
 			return forms.onSeam(call)
 		}
-		return subscriptionSeam(call, awgFormat{}, f, c)
+		return subscriptionSeam(call, awgFormat{}, f, c, names)
 	}))
 	mux.Handle("/api/", http.StripPrefix("/api", inner))
 	mux.Handle("/ui/", pageHandler())

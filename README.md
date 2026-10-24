@@ -49,6 +49,11 @@ The panel's subscription page (Configs tab) has the format switch itself, from p
 with `vpn://`, `amneziawg://` (the config), the older `amneziawg://` link and `.conf`. The plugin only provides the `amneziawg://<config>`
 line the switch offers; it does not change the page.
 
+## CSQTT name
+
+The panel's `csqtt://` line has no name, so proxy apps show "csqtt [host]". The plugin appends the inbound's remark as the name
+(`#<remark>`), choosing the inbound by the line's `peer` port (or the only CSQTT inbound there is). A line that already has a name is left alone.
+
 ## What it does not do
 
 Only the usual subscription format (`/<sub path>/<subId>`) is changed (the page a browser shows is left alone); JSON and Clash subscriptions and traffic accounting are not
