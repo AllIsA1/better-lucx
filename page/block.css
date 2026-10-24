@@ -1,0 +1,116 @@
+/* better-lucx: the AmneziaWG link format card on the subscription page */
+.bl-awg {
+  margin-top: 16px;
+}
+.bl-awg .bl-head {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ant-color-text);
+}
+.bl-awg .bl-hint {
+  margin: 2px 0 12px;
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+.bl-awg .bl-node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--ant-color-fill-quaternary);
+  border: 1px solid var(--ant-color-border-secondary);
+}
+.bl-awg .bl-node:last-child {
+  margin-bottom: 0;
+}
+.bl-awg .bl-name {
+  flex: 1 1 140px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ant-color-text);
+}
+.bl-awg .bl-formats {
+  display: flex;
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px;
+  border-radius: var(--ant-border-radius, 6px);
+  background: var(--ant-color-bg-layout, #f6f2ea);
+}
+.bl-awg .bl-opt {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.bl-awg .bl-opt input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.bl-awg .bl-opt span {
+  display: block;
+  padding: 0 11px;
+  line-height: 28px;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--ant-color-text-secondary);
+  transition: color 0.2s;
+}
+.bl-awg .bl-opt-on {
+  background: var(--ant-color-bg-container, #fffdf8);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 1px 6px -1px rgba(0, 0, 0, 0.03),
+    0 2px 4px rgba(0, 0, 0, 0.03);
+}
+.bl-awg .bl-opt-on span,
+.bl-awg .bl-opt:hover span {
+  color: var(--ant-color-text);
+}
+.bl-awg .bl-opt:has(input:focus-visible) {
+  outline: 2px solid var(--ant-color-primary);
+  outline-offset: 1px;
+}
+.bl-awg .bl-copy {
+  flex-shrink: 0;
+  min-width: 112px;
+  height: 32px;
+  padding: 0 15px;
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius, 6px);
+  background: var(--ant-color-bg-container, #fffdf8);
+  color: var(--ant-color-text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.02);
+  transition: color 0.2s, border-color 0.2s;
+}
+.bl-awg .bl-copy:hover {
+  color: var(--ant-color-primary);
+  border-color: var(--ant-color-primary);
+}
+@media (max-width: 480px) {
+  .bl-awg .bl-formats {
+    order: 5;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .bl-awg .bl-opt span {
+    padding: 0 8px;
+  }
+}
