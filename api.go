@@ -35,7 +35,7 @@ func newMux(api panelAPI, f *fixer, c *customLinks) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /_lucx/seam/{mode}", SeamHandler(func(call SeamCall) (SeamReply, error) {
-		return subscriptionSeam(call, f, c)
+		return subscriptionSeam(call, awgFormat{}, f, c)
 	}))
 	mux.Handle("/api/", http.StripPrefix("/api", inner))
 	mux.Handle("/ui/", pageHandler())

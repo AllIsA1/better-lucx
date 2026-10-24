@@ -7,19 +7,36 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
 const seamRoute = "/links/:subid"
 
-// linkSource is a module that adds lines to a subscription.
-type linkSource interface {
-	linksFor(subID string) []string
+// subModule is a part of the plugin that changes a subscription: it gets the lines of the panel's answer
+// (and what the modules before it made of them) and returns the lines to send.
+type subModule interface {
+	apply(subID string, lines []string) []string
 }
 
-// subscriptionSeam answers the seam declared in lucx-plugin.json: the lines every source has for the
-// subscription are added to the panel's answer, unless the answer already has them.
-func subscriptionSeam(c SeamCall, sources ...linkSource) (SeamReply, error) {
+// appendMissing adds the lines that are not there yet at the end.
+func appendMissing(lines, extra []string) []string {
+	present := make(map[string]bool, len(lines)+len(extra))
+	for _, l := range lines {
+		present[strings.TrimSpace(l)] = true
+	}
+	for _, l := range extra {
+		if !present[l] {
+			present[l] = true
+			lines = append(lines, l)
+		}
+	}
+	return lines
+}
+
+// subscriptionSeam answers the seam declared in lucx-plugin.json: every module gets its turn at the
+// subscription, in the order given.
+func subscriptionSeam(c SeamCall, modules ...subModule) (SeamReply, error) {
 	if c.Seam.Engine != "sub" || c.Seam.Mode != "after" {
 		return SeamReply{}, fmt.Errorf("no seam %s/%s/%s is declared", c.Seam.Engine, c.Seam.Mode, c.Seam.Route)
 	}
@@ -34,23 +51,15 @@ func subscriptionSeam(c SeamCall, sources ...linkSource) (SeamReply, error) {
 	if !ok {
 		return Keep(), nil
 	}
-	present := map[string]bool{}
-	for _, line := range strings.Split(text, "\n") {
-		present[strings.TrimSpace(line)] = true
+	original := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	lines := append([]string(nil), original...)
+	for _, m := range modules {
+		lines = m.apply(subID, lines)
 	}
-	var missing []string
-	for _, src := range sources {
-		for _, link := range src.linksFor(subID) {
-			if !present[link] {
-				present[link] = true
-				missing = append(missing, link)
-			}
-		}
-	}
-	if len(missing) == 0 {
+	if slices.Equal(lines, original) {
 		return Keep(), nil
 	}
-	changed := strings.TrimRight(text, "\n") + "\n" + strings.Join(missing, "\n")
+	changed := strings.Join(lines, "\n")
 	if wrapped {
 		changed = base64.StdEncoding.EncodeToString([]byte(changed))
 	}

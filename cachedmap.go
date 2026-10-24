@@ -62,6 +62,11 @@ func (c *cachedMap) linksFor(subID string) []string {
 	return c.data[subID]
 }
 
+// apply adds the module's lines of the subscription (the data is read in the background).
+func (c *cachedMap) apply(subID string, lines []string) []string {
+	return appendMissing(lines, c.linksFor(subID))
+}
+
 // startLoadLocked starts a background load unless one runs or the last one failed a moment ago. It returns
 // the channel that closes when the running load ends, nil when there is nothing to wait for.
 func (c *cachedMap) startLoadLocked() <-chan struct{} {

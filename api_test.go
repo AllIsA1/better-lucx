@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -202,6 +203,23 @@ func TestThePageAndTheSeamAreServed(t *testing.T) {
 	a.mux.ServeHTTP(rec, httptest.NewRequest("POST", "/_lucx/seam/after", bytes.NewReader(raw)))
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"action"`) {
 		t.Errorf("seam = %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestTheSeamEndpointRunsTheAmneziaWGModule(t *testing.T) {
+	a := newAPIRig(t)
+	vpn := amneziaVPN(t, named("through the mux"))
+	c := call("subA", b64(vpn), nil)
+	raw, _ := json.Marshal(c)
+	rec := httptest.NewRecorder()
+	a.mux.ServeHTTP(rec, httptest.NewRequest("POST", "/_lucx/seam/after", bytes.NewReader(raw)))
+	var reply SeamReply
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &reply) != nil || reply.Action != "modify" {
+		t.Fatalf("reply = %d %s", rec.Code, rec.Body.String())
+	}
+	dec, _ := base64.StdEncoding.DecodeString(string(*reply.Response.Body))
+	if !strings.Contains(string(dec), vpn+"\namneziawg://") {
+		t.Errorf("subscription = %q", dec)
 	}
 }
 

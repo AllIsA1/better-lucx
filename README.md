@@ -26,6 +26,12 @@ none (not for `vmess://`, which carries its name inside).
 The links are kept by the plugin, in its data directory (`links.json`), by the client's email: a client renamed in the panel loses its
 links, and when the panel moves to another server, move the plugin's data directory too.
 
+## AmneziaWG link format
+
+For an AmneziaWG node the panel hands a client `vpn://…` (and, for the AWG inbounds, the older `amneziawg://key@host?…` line); only the
+INCY client gets `amneziawg://<base64url config>#name`. The plugin adds that last line, the same config as in `vpn://`, right after every
+`vpn://` line of the subscription, for every client. A line that is already there is not added again.
+
 ## What it does not do
 
 Only the usual subscription format (`/<sub path>/<subId>`) is changed; JSON and Clash subscriptions and traffic accounting are not
