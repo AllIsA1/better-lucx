@@ -45,15 +45,13 @@ INCY client gets `amneziawg://<base64url config>#name`. The plugin adds that las
 
 ## AmneziaWG on the subscription page
 
-The page a browser shows for a subscription link gets one more card, **AmneziaWG link format**: one row per AmneziaWG node with a
-switch between `vpn://`, `amneziawg://` (the config), `amneziawg:// (legacy)` (the older link with the key and settings in it, when the
-subscription has it) and `.conf` (the config text), and a Copy button for the chosen form. The card is drawn in the panel's colours,
-follows its light and dark theme and its language (English and Russian), and sits under the panel's own card. The plugin adds it to the
-page's HTML together with a small script; the panel's page itself is not changed.
+The panel's subscription page (Configs tab) has the format switch itself, from panel build `-plugins.7` on: one row per AmneziaWG node
+with `vpn://`, `amneziawg://` (the config), the older `amneziawg://` link and `.conf`. The plugin only provides the `amneziawg://<config>`
+line the switch offers; it does not change the page.
 
 ## What it does not do
 
-Only the usual subscription format (`/<sub path>/<subId>`) and its page are changed; JSON and Clash subscriptions and traffic accounting are not
+Only the usual subscription format (`/<sub path>/<subId>`) is changed (the page a browser shows is left alone); JSON and Clash subscriptions and traffic accounting are not
 touched. Changes of clients (switched off, expiry) show up within about 30 seconds. Traffic of third-party links cannot be counted:
 it does not pass through the panel.
 

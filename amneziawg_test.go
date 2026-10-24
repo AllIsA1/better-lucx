@@ -317,3 +317,9 @@ func TestAConfigWithOnlyAPeerIsNotAConfig(t *testing.T) {
 		t.Error("a text with only [Peer] was taken as a config")
 	}
 }
+
+func TestTheSubscriptionPageOfABrowserIsLeftAlone(t *testing.T) {
+	r := newRig(t)
+	html := []byte("<!doctype html><html><body>vpn://abc</body></html>")
+	r.keeps("sub1", html, map[string][]string{"Content-Type": {"text/html; charset=utf-8"}})
+}
