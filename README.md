@@ -52,7 +52,7 @@ line the switch offers; it does not change the page.
 ## CSQTT name
 
 The panel's `csqtt://` line has no name, so proxy apps show "csqtt [host]". The plugin appends the inbound's remark as the name
-(`#<remark>`), choosing the inbound by the line's `peer` port (or the only CSQTT inbound there is). A line that already has a name is left alone.
+(`#<remark>`), choosing the inbound by the line's `peer` port (or the only CSQTT inbound there is). The sealed `csqtt://<base64>` lines of newer panels carry no readable port, so they are named after the only CSQTT inbound. A line that already has a name is left alone.
 
 ## What it does not do
 

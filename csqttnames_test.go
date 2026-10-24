@@ -63,3 +63,24 @@ func TestSubscriptionWithoutCsqttIsUntouched(t *testing.T) {
 		t.Errorf("lines = %q", got)
 	}
 }
+
+// The panel from lucx.310 on gives the line as csqtt://<base64url sealed payload>: no query to read the port from.
+func TestNamesAnEncryptedCsqttLineAfterTheOnlyInbound(t *testing.T) {
+	line := "csqtt://AbCdEf0123-_AbCdEf0123-_AbCdEf0123-_AbCdEf0123-_AbCdEf0123-_AbCdEf0123-_AbCdEf0123"
+	if !isUnnamedCsqtt(line) {
+		t.Fatal("an encrypted line without a name was not recognised")
+	}
+	if got := csqttName(line, []string{"46000\tPoland"}); got != "Poland" {
+		t.Errorf("name = %q, want the only inbound's remark", got)
+	}
+	if got := csqttName(line, []string{"46000\tOne", "46010\tTwo"}); got != "" {
+		t.Errorf("name = %q: with several inbounds an encrypted line cannot be told apart", got)
+	}
+	r := newRig(t)
+	r.panel.inbounds = append(r.panel.inbounds, csqttInbound(46000, "Польша CSQTT"))
+	names := newCsqttNames(r.panel)
+	names.firstLoadWait = 2 * 1e9
+	if got := names.apply("sub", []string{line}); got[0] != line+"#%D0%9F%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%20CSQTT" {
+		t.Errorf("line = %q", got[0])
+	}
+}
