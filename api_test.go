@@ -273,3 +273,14 @@ func TestTheClientSearchEscapesWhatIsTyped(t *testing.T) {
 		t.Errorf("the search text became a parameter: %q", a.panel.lastPaged)
 	}
 }
+
+func postSeam(t *testing.T, a *apiRig, mode string, raw []byte) SeamReply {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	a.mux.ServeHTTP(rec, httptest.NewRequest("POST", "/_lucx/seam/"+mode, bytes.NewReader(raw)))
+	var reply SeamReply
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &reply) != nil {
+		t.Fatalf("seam %s = %d %s", mode, rec.Code, rec.Body.String())
+	}
+	return reply
+}

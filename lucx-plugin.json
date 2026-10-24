@@ -1,21 +1,64 @@
 {
   "id": "better-lucx",
   "name": "Better LucX",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "apiVersion": "1",
-  "description": "Improvements for LucX-UI subscriptions: OpenFlux inbounds reach the subscription (the panel's own query skips them), and any third-party link, of any scheme, can be given to a client (the panel refuses schemes it does not know). Switch it off and the panel does what it always did.",
+  "description": "Improvements for LucX-UI subscriptions and clients: OpenFlux inbounds reach the subscription (the panel's own query skips them), any third-party link of any scheme can be given to a client, in the client form too (the panel refuses schemes it does not know), and every AmneziaWG node also gets the amneziawg://<config> link INCY imports. Switch it off and the panel does what it always did.",
   "author": "AllIsA1",
   "license": "MIT",
   "type": "process",
   "scope": "both",
-  "run": { "command": "bin/${arch}/betterlucx" },
-  "permissions": ["seam:sub", "api:clients:read", "api:inbounds:read", "ui:menu"],
+  "run": {
+    "command": "bin/${arch}/betterlucx"
+  },
+  "permissions": [
+    "seam:sub",
+    "seam:api:clients",
+    "api:clients:read",
+    "api:inbounds:read",
+    "ui:menu"
+  ],
   "seams": [
-    { "engine": "sub", "mode": "after", "methods": ["GET"], "route": "/links/:subid" }
+    {
+      "engine": "sub",
+      "mode": "after",
+      "methods": [
+        "GET"
+      ],
+      "route": "/links/:subid"
+    },
+    {
+      "engine": "api",
+      "mode": "before",
+      "methods": [
+        "POST"
+      ],
+      "route": "/clients/:email/externalLinks"
+    },
+    {
+      "engine": "api",
+      "mode": "after",
+      "methods": [
+        "POST"
+      ],
+      "route": "/clients/:email/externalLinks"
+    },
+    {
+      "engine": "api",
+      "mode": "after",
+      "methods": [
+        "GET"
+      ],
+      "route": "/clients/get/:email"
+    }
   ],
   "ui": {
     "menu": [
-      { "title": "Better LucX", "icon": "link", "path": "/ui/index.html" }
+      {
+        "title": "Better LucX",
+        "icon": "link",
+        "path": "/ui/index.html"
+      }
     ]
   }
 }

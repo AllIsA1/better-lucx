@@ -72,10 +72,11 @@ func applyName(link, name string) string {
 }
 
 type storedLink struct {
-	ID      string `json:"id"`
-	URL     string `json:"url"`
-	Name    string `json:"name,omitempty"`
-	Enabled bool   `json:"enabled"`
+	ID       string `json:"id"`
+	URL      string `json:"url"`
+	Name     string `json:"name,omitempty"`
+	Enabled  bool   `json:"enabled"`
+	ExpiryMs int64  `json:"expiryTime,omitempty"` // 0: never; otherwise a Unix time in milliseconds, as in the panel
 }
 
 type newLink struct {
@@ -273,6 +274,65 @@ func (s *linkStore) update(email, id string, enabled *bool, name *string) error 
 	return errNoLink
 }
 
+// setExpiry sets the end of a link's life (0: never).
+func (s *linkStore) setExpiry(email, id string, ms int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	links := s.clients[email]
+	for i := range links {
+		if links[i].ID == id {
+			old := links[i]
+			links[i].ExpiryMs = ms
+			if err := s.saveLocked(); err != nil {
+				links[i] = old
+				return err
+			}
+			return nil
+		}
+	}
+	return errNoLink
+}
+
+// replace makes rows the whole set of a client's links, which is what the panel's form does with its own:
+// a link that stays keeps its id, one that is not in rows is gone, the rows are taken as they are (they were
+// checked before). An empty set removes the client.
+func (s *linkStore) replace(email string, rows []formRow) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old := s.clients[email]
+	byURL := make(map[string]storedLink, len(old))
+	for _, l := range old {
+		byURL[l.URL] = l
+	}
+	next := make([]storedLink, 0, len(rows))
+	seen := map[string]bool{}
+	for _, r := range rows {
+		if seen[r.URL] {
+			continue
+		}
+		seen[r.URL] = true
+		l := storedLink{ID: newID(), URL: r.URL, Name: r.Name, Enabled: r.Enabled, ExpiryMs: r.ExpiryMs}
+		if prev, ok := byURL[r.URL]; ok {
+			l.ID = prev.ID
+		}
+		next = append(next, l)
+	}
+	if len(next) == 0 {
+		delete(s.clients, email)
+	} else {
+		s.clients[email] = next
+	}
+	if err := s.saveLocked(); err != nil {
+		if len(old) == 0 {
+			delete(s.clients, email)
+		} else {
+			s.clients[email] = old
+		}
+		return err
+	}
+	return nil
+}
+
 func (s *linkStore) remove(email, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -343,7 +403,7 @@ func (c *customLinks) loadLinks(ctx context.Context) (map[string][]string, error
 			continue
 		}
 		for _, l := range c.store.list(email) {
-			if l.Enabled {
+			if l.Enabled && (l.ExpiryMs <= 0 || l.ExpiryMs > nowMs) {
 				data[rec.Client.SubID] = appendNew(data[rec.Client.SubID], []string{applyName(l.URL, l.Name)})
 			}
 		}

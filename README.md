@@ -26,6 +26,17 @@ none (not for `vmess://`, which carries its name inside).
 The links are kept by the plugin, in its data directory (`links.json`), by the client's email: a client renamed in the panel loses its
 links, and when the panel moves to another server, move the plugin's data directory too.
 
+## Links of any scheme in the client form
+
+The client form of the panel (Clients → edit → Links) refuses every link whose scheme the panel does not know: `amneziawg://`, `yptun://`,
+`tuic://`, … With this plugin the form takes them. When the form is saved the plugin lifts the links of unknown schemes out of the request,
+lets the panel have the rest, and keeps those links itself (after the panel has said yes); when the form reads the client back the plugin
+puts them into the list again. They are written into the client's subscription like the links added on the Better LucX page, with the
+remark as the name after `#`, switched off or ended links are not served. A link of a scheme the panel knows stays the panel's: it is
+checked by the panel and gets its own error message. A link that could damage the subscription (a space, a line break) is refused with
+the panel's usual kind of message. To read the client the plugin needs the right to take part in the answers of the clients API
+(`seam:api:clients`, shown as dangerous: the client's data passes through it; it only adds its own links).
+
 ## AmneziaWG link format
 
 For an AmneziaWG node the panel hands a client `vpn://…` (and, for the AWG inbounds, the older `amneziawg://key@host?…` line); only the
