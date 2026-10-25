@@ -45,7 +45,11 @@ type namer interface {
 func subscriptionSeam(c SeamCall, parts ...any) (SeamReply, error) {
 	var modules []subModule
 	var namers []namer
+	var raws []rawOnly
 	for _, p := range parts {
+		if m, ok := p.(rawOnly); ok {
+			raws = append(raws, m)
+		}
 		if m, ok := p.(subModule); ok {
 			modules = append(modules, m)
 		}
@@ -74,6 +78,9 @@ func subscriptionSeam(c SeamCall, parts ...any) (SeamReply, error) {
 	lines := append([]string(nil), original...)
 	for _, m := range modules {
 		lines = m.apply(subID, lines)
+	}
+	for _, m := range raws {
+		lines = m.applyRaw(lines)
 	}
 	if slices.Equal(lines, original) {
 		return Keep(), nil

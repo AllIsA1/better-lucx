@@ -40,7 +40,7 @@ func newMux(api panelAPI, f *fixer, c *customLinks) http.Handler {
 		if call.Seam.Engine == "api" {
 			return forms.onSeam(call)
 		}
-		return subscriptionSeam(call, awgFormat{}, f, c, names)
+		return subscriptionSeam(call, awgFormat{}, f, c, names, csqttPlain{})
 	}))
 	mux.Handle("/api/", http.StripPrefix("/api", inner))
 	mux.Handle("/ui/", pageHandler())

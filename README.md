@@ -56,6 +56,14 @@ them (the remark of their inbound) in a separate list next to the links. **The l
 reads everything after `csqtt://` as the sealed payload, so a `#name` made it drop the link (better-lucx 1.3.1 and 1.3.2 did add one;
 1.4.1 does not). A proxy client shows such a profile under the name it makes up itself.
 
+## Plain CSQTT links in the subscription
+
+The panel (lucx.310 on) gives a CSQTT inbound as a sealed link, `csqtt://<base64url>`. The proxy clients that fetch a subscription
+(YPtun, for one) read only the plain form, `csqtt://connect?v=2&host=…&peer=…&password=…&hashes=a+b`, and skip the sealed one. The plugin
+opens each sealed CSQTT line of the raw subscription and sends the plain form of the same link (the person's own password, no `#name`)
+to every client. The page a browser shows is left as the panel made it, and so are the links the panel hands out for copying: the
+official CSQTT app never fetches a subscription, a person pastes a link into it, and it **accepts the sealed link only**.
+
 ## The subscription page
 
 What the plugin adds to the raw subscription (OpenFlux links, own links, the `amneziawg://` config line, CSQTT names) is added to the
