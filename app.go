@@ -47,6 +47,9 @@ func subscriptionSeam(c SeamCall, modules ...subModule) (SeamReply, error) {
 	if subID == "" {
 		return Keep(), nil
 	}
+	if isHTML(c.Response) {
+		return pageSeam(c.Response, subID, modules), nil // the page of a browser: its list of links
+	}
 	text, wrapped, ok := subscriptionText(c.Response)
 	if !ok {
 		return Keep(), nil

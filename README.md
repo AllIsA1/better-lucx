@@ -54,9 +54,15 @@ line the switch offers; it does not change the page.
 The panel's `csqtt://` line has no name, so proxy apps show "csqtt [host]". The plugin appends the inbound's remark as the name
 (`#<remark>`), choosing the inbound by the line's `peer` port (or the only CSQTT inbound there is). The sealed `csqtt://<base64>` lines of newer panels carry no readable port, so they are named after the only CSQTT inbound. A line that already has a name is left alone.
 
+## The subscription page
+
+What the plugin adds to the raw subscription (OpenFlux links, own links, the `amneziawg://` config line, CSQTT names) is added to the
+list of links on the page a browser shows for the subscription too, so the page and the proxy client agree. The plugin changes only
+the list the panel embeds in the page (`window.__SUB_PAGE_DATA__`); a custom page theme that does not carry it is left as it is.
+
 ## What it does not do
 
-Only the usual subscription format (`/<sub path>/<subId>`) is changed (the page a browser shows is left alone); JSON and Clash subscriptions and traffic accounting are not
+Only the usual subscription format (`/<sub path>/<subId>`) and its page are changed; JSON and Clash subscriptions and traffic accounting are not
 touched. Changes of clients (switched off, expiry) show up within about 30 seconds. Traffic of third-party links cannot be counted:
 it does not pass through the panel.
 
