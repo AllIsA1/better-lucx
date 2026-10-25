@@ -74,7 +74,7 @@ func TestTheRawSubscriptionKeepsTheCsqttLineAsItIs(t *testing.T) {
 
 func TestThePageGetsLinkNamesForCsqttAndOpenFluxAndLeavesTheLinksAlone(t *testing.T) {
 	n := namerRig(t, csqttInbound(46000, "Польша CSQTT"))
-	f := &fixer{names: map[string]string{"openflux://v1/AAAA": "Польша OpenFlux"}}
+	f := openfluxNamerRig(t, "openflux://v1/AAAA", "Польша OpenFlux")
 	if f.nameOf("openflux://v1/AAAA") != "Польша OpenFlux" || f.nameOf("vless://x") != "" {
 		t.Fatal("the OpenFlux namer does not name its links")
 	}

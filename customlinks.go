@@ -413,3 +413,31 @@ func (c *customLinks) loadLinks(ctx context.Context) (map[string][]string, error
 	}
 	return data, nil
 }
+
+// usableRecord: the panel gives a client that is switched off, expired or out of traffic no working link, so neither
+// does this plugin.
+func usableRecord(enable bool, expiryMs, totalBytes, usedBytes, nowMs int64) bool {
+	if !enable {
+		return false
+	}
+	if expiryMs > 0 && expiryMs <= nowMs {
+		return false
+	}
+	if totalBytes > 0 && usedBytes >= totalBytes {
+		return false
+	}
+	return true
+}
+
+func appendNew(list, add []string) []string {
+	for _, a := range add {
+		dup := false
+		for _, l := range list {
+			dup = dup || l == a
+		}
+		if !dup {
+			list = append(list, a)
+		}
+	}
+	return list
+}

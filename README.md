@@ -5,19 +5,16 @@ Improvements for the [LucX-UI](https://github.com/AlexeyLCP/lucx-ui) subscriptio
 
 ## OpenFlux in the subscription
 
-The panel can build the link of an OpenFlux inbound (copying it from the inbound or from the client's page works), but the query that
-picks the inbounds of a subscription lists the protocols by name and `openflux` is not on that list. A client attached to an OpenFlux
-inbound therefore never gets its link from the subscription. The plugin adds the link of every OpenFlux inbound the subscription's
-clients belong to, if it is not there yet. Nothing is added for a client that is switched off, expired or out of traffic, nor for an
-inbound that is switched off or excluded from subscriptions. If the panel itself is fixed one day, the plugin finds the link already
-there and adds nothing.
+Since lucx.313 the panel puts the OpenFlux links into the subscription itself, so the plugin no longer does (better-lucx up to 1.4.2
+added them for older panels; it does not any more). It only tells the subscription page what to call them, see below. A panel older
+than lucx.313 needs better-lucx 1.4.2.
 
 ## Own links
 
-The panel lets you add third-party links to a client, but only of the schemes it knows (it refuses `yptun://`, `qwdtt://`,
-`openflux://`, `anytls://` and every scheme it has not heard of). This plugin takes any link of any scheme. Open **Better LucX** in the
-sidebar, find a client, paste the links (one per line, with an optional name) and they are added to the end of the client's
-subscription. A link can be switched off, renamed or deleted; changes show up in the subscription almost at once.
+Links of any scheme that were added to clients with this plugin keep working: they are written into the client's subscription as
+before. The plugin has no sidebar page any more (better-lucx 1.4.3): the panel build `…-plugins.6` and later takes a link of any scheme in
+the client form itself (Clients → edit → Links), without any plugin, so that is where new links go. Links the plugin already holds are
+shown in the client form too (see below) and can be changed there.
 
 A link must be one line without spaces or control characters (it becomes one line of the subscription); a client can have up to 100.
 A client that is switched off, expired or out of traffic gets nothing, as in the panel. The name is added after `#` when the link has
@@ -31,7 +28,7 @@ links, and when the panel moves to another server, move the plugin's data direct
 The client form of the panel (Clients → edit → Links) refuses every link whose scheme the panel does not know: `amneziawg://`, `yptun://`,
 `tuic://`, … With this plugin the form takes them. When the form is saved the plugin lifts the links of unknown schemes out of the request,
 lets the panel have the rest, and keeps those links itself (after the panel has said yes); when the form reads the client back the plugin
-puts them into the list again. They are written into the client's subscription like the links added on the Better LucX page, with the
+puts them into the list again. They are written into the client's subscription like the links the plugin holds, with the
 remark as the name after `#`, switched off or ended links are not served. A link of a scheme the panel knows stays the panel's: it is
 checked by the panel and gets its own error message. A link that could damage the subscription (a space, a line break) is refused with
 the panel's usual kind of message. To read the client the plugin needs the right to take part in the answers of the clients API
@@ -66,7 +63,7 @@ official CSQTT app never fetches a subscription, a person pastes a link into it,
 
 ## The subscription page
 
-What the plugin adds to the raw subscription (OpenFlux links, own links, the `amneziawg://` config line, CSQTT names) is added to the
+What the plugin adds to the raw subscription (own links, the `amneziawg://` config line, CSQTT names) is added to the
 list of links on the page a browser shows for the subscription too, so the page and the proxy client agree. The plugin changes only
 the list the panel embeds in the page (`window.__SUB_PAGE_DATA__`); a custom page theme that does not carry it is left as it is.
 

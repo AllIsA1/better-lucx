@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("better-lucx: %v", err)
 	}
 	log.Print("better-lucx plugin ready")
-	if err := Serve(newMux(api, newFixer(api), newCustomLinks(api, store))); err != nil {
+	if err := Serve(newMux(api, newOpenfluxNames(api), newCustomLinks(api, store))); err != nil {
 		log.Fatal(err)
 	}
 }

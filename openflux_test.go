@@ -128,7 +128,7 @@ func client(email, sub string, inbounds []int, mutate ...func(m map[string]any))
 type rig struct {
 	t     *testing.T
 	panel *fakePanel
-	fix   *fixer
+	fix   *openfluxNames
 	now   time.Time
 }
 
@@ -137,9 +137,9 @@ func newRig(t *testing.T) *rig {
 	r.panel.inbounds = []map[string]any{openflux(1), openflux(2), {"id": 3, "protocol": "vless", "enable": true}}
 	r.panel.links = map[int][]string{1: {linkA}, 2: {linkB}, 3: {vless}}
 	r.panel.clients = []map[string]any{client("alice", "subA", []int{1, 3}), client("bob", "subB", []int{2})}
-	r.fix = newFixer(r.panel)
-	r.fix.now = func() time.Time { return r.now }
-	r.fix.firstLoadWait = 2 * time.Second
+	r.fix = newOpenfluxNames(r.panel)
+	r.fix.cm.now = func() time.Time { return r.now }
+	r.fix.cm.firstLoadWait = 2 * time.Second
 	return r
 }
 
@@ -167,170 +167,10 @@ func (r *rig) decoded(reply SeamReply) string {
 
 func (r *rig) keeps(sub string, body []byte, headers map[string][]string) {
 	r.t.Helper()
-	if reply, err := r.fix.onSeam(call(sub, body, headers)); err != nil || reply.Action != "keep" {
+	if reply, err := subscriptionSeam(call(sub, body, headers), awgFormat{}); err != nil || reply.Action != "keep" {
 		r.t.Errorf("reply = %+v, err %v, want keep", reply, err)
 	}
 }
-
-func TestAddsTheOpenFluxLinkTheSubscriptionLacks(t *testing.T) {
-	r := newRig(t)
-	reply, err := r.fix.onSeam(call("subA", b64(vless), nil))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, want := r.decoded(reply), vless+"\n"+linkA; got != want {
-		t.Errorf("subscription = %q, want %q", got, want)
-	}
-}
-
-func TestAddsToAPlainTextSubscriptionToo(t *testing.T) {
-	r := newRig(t)
-	hdr := map[string][]string{"Content-Type": {"text/plain; charset=utf-8"}}
-	reply, err := r.fix.onSeam(call("subA", []byte(vless+"\n"), hdr))
-	if err != nil || reply.Action != "modify" || string(*reply.Response.Body) != vless+"\n"+linkA {
-		t.Fatalf("reply = %+v, err %v", reply, err)
-	}
-}
-
-func TestAddsEveryOpenFluxInboundOfTheSubscription(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = []map[string]any{client("alice", "subA", []int{1, 2, 3})}
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if got, want := r.decoded(reply), vless+"\n"+linkA+"\n"+linkB; got != want {
-		t.Errorf("subscription = %q, want %q", got, want)
-	}
-}
-
-func TestSeveralClientsOfOneSubscriptionAreCovered(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = []map[string]any{client("alice", "subA", []int{1}), client("alice2", "subA", []int{2})}
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if got, want := r.decoded(reply), vless+"\n"+linkA+"\n"+linkB; got != want {
-		t.Errorf("subscription = %q", got)
-	}
-}
-
-func TestDoesNotAddWhatTheSubscriptionAlreadyHas(t *testing.T) {
-	r := newRig(t)
-	r.keeps("subA", b64(vless+"\n"+linkA), nil) // the panel itself has been fixed
-	hdr := map[string][]string{"Content-Type": {"text/plain"}}
-	r.keeps("subA", []byte(vless+"\n"+linkA+"\n"), hdr)
-}
-
-func TestLeavesAlonewhatItDoesNotKnow(t *testing.T) {
-	r := newRig(t)
-	r.keeps("nobody", b64(vless), nil)                                                    // no such subscription
-	r.keeps("subA", []byte("<html>page</html>"), nil)                                     // not a subscription
-	r.keeps("subA", nil, nil)                                                             // empty
-	r.keeps("subA", []byte("hello"), map[string][]string{"Content-Type": {"text/plain"}}) // plain text, no links
-	c := call("subA", b64(vless), nil)
-	c.Response.Status = 404
-	if reply, _ := r.fix.onSeam(c); reply.Action != "keep" {
-		t.Errorf("an error answer was changed: %+v", reply)
-	}
-	c = call("subA", b64(vless), nil)
-	c.Response = nil
-	if reply, _ := r.fix.onSeam(c); reply.Action != "keep" {
-		t.Errorf("a call without an answer was changed: %+v", reply)
-	}
-	c = call("", b64(vless), nil)
-	c.Request.Params = nil
-	if reply, _ := r.fix.onSeam(c); reply.Action != "keep" {
-		t.Errorf("a call without a subscription id was changed: %+v", reply)
-	}
-}
-
-func TestOnlyTheRouteItDeclaredIsTouched(t *testing.T) {
-	r := newRig(t)
-	c := call("subA", b64(vless), nil)
-	c.Seam.Route = "/json/:subid"
-	if reply, _ := r.fix.onSeam(c); reply.Action != "keep" {
-		t.Errorf("another format was changed: %+v", reply)
-	}
-	c = call("subA", b64(vless), nil)
-	c.Seam.Mode = "before"
-	if _, err := r.fix.onSeam(c); err == nil {
-		t.Error("a mode the plugin never declared must fail")
-	}
-}
-
-func TestKeepsOutWhatThePanelHidesFromSubscriptions(t *testing.T) {
-	cases := map[string]func(r *rig){
-		"inbound switched off":       func(r *rig) { r.panel.inbounds[0]["enable"] = false },
-		"inbound excluded from subs": func(r *rig) { r.panel.inbounds[0]["excludeFromSub"] = true },
-		"client switched off":        func(r *rig) { r.panel.clients[0]["enable"] = false },
-		"client expired":             func(r *rig) { r.panel.clients[0]["expiryTime"] = r.now.Add(-time.Hour).UnixMilli() },
-		"client's traffic used up":   func(r *rig) { r.panel.clients[0]["totalGB"] = 30 },
-		"client not on the inbound":  func(r *rig) { r.panel.clients[0]["inboundIds"] = []int{3} },
-		"the panel has no link":      func(r *rig) { r.panel.links[1] = nil },
-		"a link of another protocol": func(r *rig) { r.panel.links[1] = []string{"trojan://x@host.example:443#t"} },
-	}
-	for name, setup := range cases {
-		t.Run(name, func(t *testing.T) {
-			r := newRig(t)
-			setup(r)
-			r.keeps("subA", b64(vless), nil)
-		})
-	}
-}
-
-func TestAClientWithTimeLeftAndTrafficLeftIsServed(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients[0]["expiryTime"] = r.now.Add(time.Hour).UnixMilli()
-	r.panel.clients[0]["totalGB"] = 31
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if got := r.decoded(reply); !strings.HasSuffix(got, linkA) {
-		t.Errorf("subscription = %q", got)
-	}
-}
-
-func TestAsksThePanelOnlyAboutOpenFluxAndOnlyReadsIt(t *testing.T) {
-	r := newRig(t)
-	r.fix.onSeam(call("subA", b64(vless), nil))
-	r.panel.mu.Lock()
-	defer r.panel.mu.Unlock()
-	for route := range r.panel.calls {
-		if route != "/inbounds/list/slim" && route != "/clients/list/paged" && !(strings.HasPrefix(route, "/inbounds/") && strings.HasSuffix(route, "/links")) {
-			t.Errorf("the plugin called %s", route)
-		}
-	}
-	if r.panel.calls["/inbounds/3/links"] != 0 {
-		t.Error("the links of an inbound that is not OpenFlux were fetched")
-	}
-}
-
-func TestTheAnswerComesFromMemoryAfterTheFirstLoad(t *testing.T) {
-	r := newRig(t)
-	for i := 0; i < 5; i++ {
-		r.fix.onSeam(call("subA", b64(vless), nil))
-	}
-	if n := r.panel.count("/inbounds/list/slim"); n != 1 {
-		t.Errorf("the inbound list was fetched %d times for 5 requests", n)
-	}
-	if n := r.panel.count("/clients/list/paged"); n != 1 {
-		t.Errorf("the client list was fetched %d times for 5 requests", n)
-	}
-}
-
-func TestAStaleAnswerIsServedAtOnceWhileTheDataIsRefreshed(t *testing.T) {
-	r := newRig(t)
-	r.fix.onSeam(call("subA", b64(vless), nil))
-	r.panel.mu.Lock()
-	r.panel.links[1] = []string{"openflux://changed@host.example:7001/"}
-	r.panel.mu.Unlock()
-	r.now = r.now.Add(2 * r.fix.ttl)
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if got := r.decoded(reply); !strings.HasSuffix(got, linkA) {
-		t.Errorf("a stale answer was expected at once, got %q", got)
-	}
-	waitFor(t, func() bool { return r.panel.count("/inbounds/list/slim") == 2 })
-	waitFor(t, func() bool {
-		reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-		return reply.Action == "modify" && strings.Contains(string(mustDecode(*reply.Response.Body)), "changed@")
-	})
-}
-
-func mustDecode(b []byte) []byte { raw, _ := base64.StdEncoding.DecodeString(string(b)); return raw }
 
 func waitFor(t *testing.T, ok func() bool) {
 	t.Helper()
@@ -343,122 +183,13 @@ func waitFor(t *testing.T, ok func() bool) {
 	t.Fatal("condition not reached")
 }
 
-func TestAPanelThatFailsLeavesTheSubscriptionAloneAndIsRetried(t *testing.T) {
+// openfluxNamerRig is a namer over a panel with one OpenFlux inbound holding the given link, named remark.
+func openfluxNamerRig(t *testing.T, link, remark string) *openfluxNames {
+	t.Helper()
 	r := newRig(t)
-	r.panel.fail = errors.New("panel answered HTTP 500")
-	r.keeps("subA", b64(vless), nil)
-	r.panel.mu.Lock()
-	r.panel.fail = nil
-	r.panel.mu.Unlock()
-	r.now = r.now.Add(r.fix.retry + time.Second)
-	waitFor(t, func() bool {
-		reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-		return reply.Action == "modify"
-	})
-}
-
-func TestAFailingPanelIsNotHammered(t *testing.T) {
-	r := newRig(t)
-	r.panel.fail = errors.New("down")
-	for i := 0; i < 20; i++ {
-		r.fix.onSeam(call("subA", b64(vless), nil))
-	}
-	if n := r.panel.count("/inbounds/list/slim"); n > 2 {
-		t.Errorf("a failing panel was asked %d times in 20 requests", n)
-	}
-}
-
-func TestAFirstRequestDoesNotWaitLongerThanItMay(t *testing.T) {
-	r := newRig(t)
-	r.fix.firstLoadWait = 50 * time.Millisecond
-	r.panel.slow = 300 * time.Millisecond
-	start := time.Now()
-	r.keeps("subA", b64(vless), nil)
-	if d := time.Since(start); d > 200*time.Millisecond {
-		t.Errorf("the first request waited %v", d)
-	}
-	waitFor(t, func() bool {
-		reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-		return reply.Action == "modify"
-	})
-}
-
-func TestManyClientsAreReadPageByPage(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = nil
-	for i := 0; i < 450; i++ {
-		r.panel.clients = append(r.panel.clients, client(fmt.Sprintf("u%d", i), fmt.Sprintf("s%d", i), []int{1}))
-	}
-	reply, _ := r.fix.onSeam(call("s449", b64(vless), nil))
-	if got := r.decoded(reply); !strings.HasSuffix(got, linkA) {
-		t.Errorf("the last client of several pages was missed: %q", got)
-	}
-	if n := r.panel.count("/clients/list/paged"); n < 2 || n > 5 {
-		t.Errorf("pages fetched = %d", n)
-	}
-}
-
-func TestNoOpenFluxInboundsMeansNoWork(t *testing.T) {
-	r := newRig(t)
-	r.panel.inbounds = []map[string]any{{"id": 3, "protocol": "vless", "enable": true}}
-	r.keeps("subA", b64(vless), nil)
-	if n := r.panel.count("/clients/list/paged"); n != 0 {
-		t.Errorf("clients were listed although there is no OpenFlux inbound (%d)", n)
-	}
-}
-
-func TestRequestsThatArriveTogetherShareOneLoad(t *testing.T) {
-	r := newRig(t)
-	r.panel.slow = 100 * time.Millisecond
-	var wg sync.WaitGroup
-	for i := 0; i < 6; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			r.fix.onSeam(call("subA", b64(vless), nil))
-		}()
-	}
-	wg.Wait()
-	if n := r.panel.count("/inbounds/list/slim"); n != 1 {
-		t.Errorf("the panel was read %d times for 6 simultaneous requests", n)
-	}
-}
-
-func TestAClientListThatPromisesMoreThanItHoldsEndsWithTheLastPage(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = []map[string]any{client("alice", "subA", []int{1})}
-	r.panel.inflate = 100000
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if reply.Action != "modify" {
-		t.Fatalf("reply = %+v", reply)
-	}
-	if n := r.panel.count("/clients/list/paged"); n > 3 {
-		t.Errorf("%d pages were asked for one client", n)
-	}
-}
-
-func TestTheLinksOfOneInboundAreFetchedOnceForManyClients(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = []map[string]any{client("a", "subA", []int{1}), client("b", "subB", []int{1}), client("c", "subC", []int{1})}
-	r.fix.onSeam(call("subA", b64(vless), nil))
-	if n := r.panel.count("/inbounds/1/links"); n != 1 {
-		t.Errorf("the links of one inbound were fetched %d times", n)
-	}
-}
-
-func TestLinksComeInTheOrderOfTheInbounds(t *testing.T) {
-	r := newRig(t)
-	r.panel.clients = []map[string]any{client("alice", "subA", []int{2, 1})}
-	reply, _ := r.fix.onSeam(call("subA", b64(vless), nil))
-	if got, want := r.decoded(reply), vless+"\n"+linkA+"\n"+linkB; got != want {
-		t.Errorf("subscription = %q, want %q", got, want)
-	}
-}
-
-func TestPlainTextWithoutTheRightContentTypeIsNotASubscription(t *testing.T) {
-	r := newRig(t)
-	r.keeps("subA", []byte(vless+"\n"), nil)
-	r.keeps("subA", []byte(vless+"\n"), map[string][]string{"Content-Type": {"text/html"}})
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = remark })}
+	r.panel.links = map[int][]string{1: {link}}
+	return r.fix
 }
 
 func TestTheOpenFluxLinksKnowTheRemarkOfTheirInboundForThePage(t *testing.T) {
@@ -468,9 +199,7 @@ func TestTheOpenFluxLinksKnowTheRemarkOfTheirInboundForThePage(t *testing.T) {
 		openflux(2),
 		{"id": 3, "protocol": "vless", "enable": true, "remark": "V"},
 	}
-	r.keeps("subZ", b64(vless), nil) // nobody has this one; the load still happens
-	r.fix.linksFor("subA")
-	if got := r.fix.nameOf(linkA); got != "Польша OpenFlux" {
+	if got := r.fix.nameOf(" " + linkA + " "); got != "Польша OpenFlux" {
 		t.Errorf("nameOf(linkA) = %q", got)
 	}
 	if got := r.fix.nameOf(linkB); got != "" {
@@ -478,5 +207,113 @@ func TestTheOpenFluxLinksKnowTheRemarkOfTheirInboundForThePage(t *testing.T) {
 	}
 	if got := r.fix.nameOf(vless); got != "" {
 		t.Errorf("only OpenFlux links are named here: %q", got)
+	}
+}
+
+func TestNoOpenFluxNameForAHiddenOrSwitchedOffInbound(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{
+		openflux(1, func(m map[string]any) { m["remark"] = "Hidden"; m["excludeFromSub"] = true }),
+		openflux(2, func(m map[string]any) { m["remark"] = "Off"; m["enable"] = false }),
+	}
+	if a, b := r.fix.nameOf(linkA), r.fix.nameOf(linkB); a != "" || b != "" {
+		t.Errorf("names = %q, %q", a, b)
+	}
+}
+
+func TestTheRawSubscriptionKeepsTheOpenFluxLinkAsThePanelMadeIt(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "Польша OpenFlux" })}
+	r.keeps("subA", b64(vless+"\n"+linkA), nil)
+	r.keeps("subA", b64(vless), nil) // and it is not added when the panel left it out: the panel does that itself now
+}
+
+func TestOnlyOpenFluxIsAskedAboutAndNothingIsWritten(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1), openflux(2), {"id": 3, "protocol": "vless", "enable": true, "remark": "V"}}
+	r.fix.nameOf(linkA)
+	r.panel.mu.Lock()
+	defer r.panel.mu.Unlock()
+	for route := range r.panel.calls {
+		if route != "/inbounds/list/slim" && !(strings.HasPrefix(route, "/inbounds/") && strings.HasSuffix(route, "/links")) {
+			t.Errorf("the plugin called %s", route)
+		}
+	}
+	if r.panel.calls["/inbounds/3/links"] != 0 {
+		t.Error("the links of an inbound that is not OpenFlux were fetched")
+	}
+}
+
+func TestTheNamesComeFromMemoryAfterTheFirstLoad(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "A" })}
+	for i := 0; i < 5; i++ {
+		r.fix.nameOf(linkA)
+	}
+	if n := r.panel.count("/inbounds/list/slim"); n != 1 {
+		t.Errorf("the inbound list was fetched %d times for 5 lookups", n)
+	}
+}
+
+func TestAStaleNameIsServedAtOnceWhileTheDataIsRefreshed(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "Old" })}
+	r.fix.nameOf(linkA)
+	r.panel.mu.Lock()
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "New" })}
+	r.panel.mu.Unlock()
+	r.now = r.now.Add(2 * r.fix.cm.ttl)
+	if got := r.fix.nameOf(linkA); got != "Old" {
+		t.Errorf("a stale name was expected at once, got %q", got)
+	}
+	waitFor(t, func() bool { return r.fix.nameOf(linkA) == "New" })
+}
+
+func TestAPanelThatFailsGivesNoNameAndIsRetriedButNotHammered(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "A" })}
+	r.panel.fail = errors.New("panel answered HTTP 500")
+	for i := 0; i < 20; i++ {
+		if got := r.fix.nameOf(linkA); got != "" {
+			t.Fatalf("name = %q from a failing panel", got)
+		}
+	}
+	if n := r.panel.count("/inbounds/list/slim"); n > 2 {
+		t.Errorf("a failing panel was asked %d times in 20 lookups", n)
+	}
+	r.panel.mu.Lock()
+	r.panel.fail = nil
+	r.panel.mu.Unlock()
+	r.now = r.now.Add(r.fix.cm.retry + time.Second)
+	waitFor(t, func() bool { return r.fix.nameOf(linkA) == "A" })
+}
+
+func TestAFirstLookupDoesNotWaitLongerThanItMay(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{openflux(1, func(m map[string]any) { m["remark"] = "A" })}
+	r.fix.cm.firstLoadWait = 50 * time.Millisecond
+	r.panel.slow = 300 * time.Millisecond
+	start := time.Now()
+	r.fix.nameOf(linkA)
+	if d := time.Since(start); d > 200*time.Millisecond {
+		t.Errorf("the first lookup waited %v", d)
+	}
+	waitFor(t, func() bool { return r.fix.nameOf(linkA) == "A" })
+}
+
+func TestLookupsThatArriveTogetherShareOneLoad(t *testing.T) {
+	r := newRig(t)
+	r.panel.slow = 100 * time.Millisecond
+	var wg sync.WaitGroup
+	for i := 0; i < 6; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			r.fix.nameOf(linkA)
+		}()
+	}
+	wg.Wait()
+	if n := r.panel.count("/inbounds/list/slim"); n != 1 {
+		t.Errorf("the panel was read %d times for 6 simultaneous lookups", n)
 	}
 }

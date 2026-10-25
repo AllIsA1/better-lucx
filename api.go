@@ -23,7 +23,7 @@ const maxBody = 1 << 20
 
 // newMux serves everything the plugin answers: the subscription seam, the page and the calls the page makes.
 // The panel's page bridge only reaches /api/..., which is where the page's calls go.
-func newMux(api panelAPI, f *fixer, c *customLinks) http.Handler {
+func newMux(api panelAPI, f *openfluxNames, c *customLinks) http.Handler {
 	s := &server{api: api, links: c}
 	inner := http.NewServeMux()
 	inner.HandleFunc("GET /overview", s.overview)

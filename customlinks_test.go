@@ -335,11 +335,11 @@ func TestAPanelThatFailsEverywhereLeavesTheOldDataInPlace(t *testing.T) {
 	}
 }
 
-func TestBothModulesAddTheirLinksOnce(t *testing.T) {
+func TestALinkTheSubscriptionHasIsNotAddedAgain(t *testing.T) {
 	r, c := customRig(t)
 	r.panel.clients = []map[string]any{client("alice", "subA", []int{1})}
-	c.store.add("alice", []newLink{{URL: "yptun://c"}, {URL: linkA}}) // the second one the OpenFlux module adds too
-	reply, err := subscriptionSeam(call("subA", b64(vless), nil), r.fix, c)
+	c.store.add("alice", []newLink{{URL: "yptun://c"}, {URL: linkA}}) // the second one the panel put there already
+	reply, err := subscriptionSeam(call("subA", b64(vless+"\n"+linkA), nil), r.fix, c)
 	if err != nil {
 		t.Fatal(err)
 	}

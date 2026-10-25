@@ -227,12 +227,12 @@ func TestTheOtherModulesStillAddTheirLinksAfterTheConversion(t *testing.T) {
 	r.panel.clients = []map[string]any{client("alice", "subA", []int{1})}
 	c.store.add("alice", []newLink{{URL: "yptun://own"}})
 	vpn := amneziaVPN(t, named("mixed"))
-	reply, err := subscriptionSeam(call("subA", b64(legacyLine+"\n"+vpn), nil), awgFormat{}, r.fix, c)
+	reply, err := subscriptionSeam(call("subA", b64(legacyLine+"\n"+vpn), nil), awgFormat{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(r.decoded(reply), "\n")
-	if len(lines) != 5 || lines[1] != vpn || !strings.HasPrefix(lines[2], "amneziawg://") && strings.HasSuffix(lines[2], "#mixed") || lines[3] != linkA || lines[4] != "yptun://own" {
+	if len(lines) != 4 || lines[1] != vpn || !strings.HasPrefix(lines[2], "amneziawg://") && strings.HasSuffix(lines[2], "#mixed") || lines[3] != "yptun://own" {
 		t.Errorf("lines = %v", lines)
 	}
 }
