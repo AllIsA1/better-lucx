@@ -1,8 +1,9 @@
 // Copyright (c) 2026 AllIsA1.
 // SPDX-License-Identifier: MIT
 
-// The "CSQTT name" module: the csqtt:// line of a subscription has no #name, so a proxy client calls the
-// profile "csqtt [host]". This module adds the inbound's remark as the name.
+// The "CSQTT name" helper: the csqtt:// line of a subscription says nothing of the inbound it belongs to, so the page
+// of a browser would call it "Link N". This tells the page the inbound's remark. The line itself is not touched:
+// the CSQTT app reads everything after csqtt:// as the sealed payload, so a #name made it drop the link.
 
 package main
 
@@ -18,7 +19,7 @@ const csqttPrefix = "csqtt://"
 
 // csqttNames knows the CSQTT inbounds (their ports and remarks) and names the lines that lack a name.
 type csqttNames struct {
-	*cachedMap
+	cm  *cachedMap
 	api panelAPI
 }
 
@@ -28,7 +29,7 @@ const csqttKey = "csqtt"
 
 func newCsqttNames(api panelAPI) *csqttNames {
 	n := &csqttNames{api: api}
-	n.cachedMap = newCachedMap("csqtt", n.load)
+	n.cm = newCachedMap("csqtt", n.load)
 	return n
 }
 
@@ -50,28 +51,12 @@ func (n *csqttNames) load(ctx context.Context) (map[string][]string, error) {
 	return map[string][]string{csqttKey: rows}, nil
 }
 
-func (n *csqttNames) apply(_ string, lines []string) []string {
-	var rows []string
-	for _, l := range lines {
-		if isUnnamedCsqtt(l) {
-			rows = n.linksFor(csqttKey)
-			break
-		}
+// nameOf is the remark of the CSQTT inbound a line belongs to, "" for any other line.
+func (n *csqttNames) nameOf(line string) string {
+	if !isUnnamedCsqtt(line) {
+		return ""
 	}
-	if len(rows) == 0 {
-		return lines
-	}
-	out := make([]string, len(lines))
-	for i, l := range lines {
-		out[i] = l
-		if !isUnnamedCsqtt(l) {
-			continue
-		}
-		if name := csqttName(l, rows); name != "" {
-			out[i] = strings.TrimSpace(l) + "#" + url.PathEscape(name)
-		}
-	}
-	return out
+	return csqttName(line, n.cm.linksFor(csqttKey))
 }
 
 func isUnnamedCsqtt(line string) bool {

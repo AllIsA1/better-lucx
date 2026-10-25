@@ -1,9 +1,9 @@
 {
   "id": "better-lucx",
   "name": "Better LucX",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "apiVersion": "1",
-  "description": "Improvements for LucX-UI subscriptions and clients: OpenFlux inbounds reach the subscription (the panel's own query skips them), any third-party link of any scheme can be given to a client, in the client form too (the panel refuses schemes it does not know), and every AmneziaWG node also gets the amneziawg://<config> link INCY imports. a CSQTT link gets its inbound's remark as the name (the panel gives it none, so apps show csqtt [host]). Switch it off and the panel does what it always did.",
+  "description": "Improvements for LucX-UI subscriptions and clients: OpenFlux inbounds reach the subscription (the panel's own query skips them), any third-party link of any scheme can be given to a client, in the client form too (the panel refuses schemes it does not know), and every AmneziaWG node also gets the amneziawg://<config> link INCY imports. CSQTT and OpenFlux links get their inbound's remark as the name on the subscription page. Switch it off and the panel does what it always did.",
   "author": "AllIsA1",
   "license": "MIT",
   "type": "process",

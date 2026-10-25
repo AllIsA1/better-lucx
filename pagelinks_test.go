@@ -35,7 +35,7 @@ func embedded(t *testing.T, page []byte) map[string]any {
 
 func TestThePageListGetsTheModulesLines(t *testing.T) {
 	in := pageFor(`{"sId":"abc","links":["vless://x#a"],"announce":"Привет <b>","subUrl":"https://h/sub/abc","total":"1 GB"}`)
-	out, changed := pageWithLinks(in, "abc", []subModule{addLines{"openflux://v1/AAAA"}})
+	out, changed := pageWithLinks(in, "abc", []subModule{addLines{"openflux://v1/AAAA"}}, nil)
 	if !changed {
 		t.Fatal("unchanged")
 	}
@@ -58,10 +58,10 @@ func TestThePageListGetsTheModulesLines(t *testing.T) {
 
 func TestThePageIsLeftAloneWhenNothingChanges(t *testing.T) {
 	in := pageFor(`{"links":["openflux://v1/AAAA"]}`)
-	if out, changed := pageWithLinks(in, "abc", []subModule{addLines{"openflux://v1/AAAA"}}); changed || string(out) != string(in) {
+	if out, changed := pageWithLinks(in, "abc", []subModule{addLines{"openflux://v1/AAAA"}}, nil); changed || string(out) != string(in) {
 		t.Error("a line that is there already was added again")
 	}
-	if _, changed := pageWithLinks(in, "abc", nil); changed {
+	if _, changed := pageWithLinks(in, "abc", nil, nil); changed {
 		t.Error("no modules, no change")
 	}
 }
@@ -73,7 +73,7 @@ func TestThePageIsLeftAloneWhenItIsNotTheKnownShape(t *testing.T) {
 		"no links":                        pageFor(`{"sId":"abc"}`),
 		"links of another type":           pageFor(`{"links":{"a":1}}`),
 	} {
-		if out, changed := pageWithLinks(page, "abc", []subModule{addLines{"openflux://v1/AAAA"}}); changed || string(out) != string(page) {
+		if out, changed := pageWithLinks(page, "abc", []subModule{addLines{"openflux://v1/AAAA"}}, nil); changed || string(out) != string(page) {
 			t.Errorf("%s: the page was changed", name)
 		}
 	}

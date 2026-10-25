@@ -34,9 +34,25 @@ func appendMissing(lines, extra []string) []string {
 	return lines
 }
 
+// namer tells the page of a browser what to call a link the panel gives no name (the name is not put in the
+// link: some apps read the whole line after the scheme and drop a link that carries a #name).
+type namer interface {
+	nameOf(line string) string
+}
+
 // subscriptionSeam answers the seam declared in lucx-plugin.json: every module gets its turn at the
-// subscription, in the order given.
-func subscriptionSeam(c SeamCall, modules ...subModule) (SeamReply, error) {
+// subscription, in the order given. Each of the parts is a subModule, a namer or both.
+func subscriptionSeam(c SeamCall, parts ...any) (SeamReply, error) {
+	var modules []subModule
+	var namers []namer
+	for _, p := range parts {
+		if m, ok := p.(subModule); ok {
+			modules = append(modules, m)
+		}
+		if n, ok := p.(namer); ok {
+			namers = append(namers, n)
+		}
+	}
 	if c.Seam.Engine != "sub" || c.Seam.Mode != "after" {
 		return SeamReply{}, fmt.Errorf("no seam %s/%s/%s is declared", c.Seam.Engine, c.Seam.Mode, c.Seam.Route)
 	}
@@ -48,7 +64,7 @@ func subscriptionSeam(c SeamCall, modules ...subModule) (SeamReply, error) {
 		return Keep(), nil
 	}
 	if isHTML(c.Response) {
-		return pageSeam(c.Response, subID, modules), nil // the page of a browser: its list of links
+		return pageSeam(c.Response, subID, modules, namers), nil // the page of a browser: its list of links
 	}
 	text, wrapped, ok := subscriptionText(c.Response)
 	if !ok {

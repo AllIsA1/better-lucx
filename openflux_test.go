@@ -460,3 +460,23 @@ func TestPlainTextWithoutTheRightContentTypeIsNotASubscription(t *testing.T) {
 	r.keeps("subA", []byte(vless+"\n"), nil)
 	r.keeps("subA", []byte(vless+"\n"), map[string][]string{"Content-Type": {"text/html"}})
 }
+
+func TestTheOpenFluxLinksKnowTheRemarkOfTheirInboundForThePage(t *testing.T) {
+	r := newRig(t)
+	r.panel.inbounds = []map[string]any{
+		openflux(1, func(m map[string]any) { m["remark"] = "  Польша OpenFlux " }),
+		openflux(2),
+		{"id": 3, "protocol": "vless", "enable": true, "remark": "V"},
+	}
+	r.keeps("subZ", b64(vless), nil) // nobody has this one; the load still happens
+	r.fix.linksFor("subA")
+	if got := r.fix.nameOf(linkA); got != "Польша OpenFlux" {
+		t.Errorf("nameOf(linkA) = %q", got)
+	}
+	if got := r.fix.nameOf(linkB); got != "" {
+		t.Errorf("an inbound with no remark gives no name: %q", got)
+	}
+	if got := r.fix.nameOf(vless); got != "" {
+		t.Errorf("only OpenFlux links are named here: %q", got)
+	}
+}

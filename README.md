@@ -49,10 +49,12 @@ The panel's subscription page (Configs tab) has the format switch itself, from p
 with `vpn://`, `amneziawg://` (the config), the older `amneziawg://` link and `.conf`. The plugin only provides the `amneziawg://<config>`
 line the switch offers; it does not change the page.
 
-## CSQTT name
+## CSQTT and OpenFlux names on the page
 
-The panel's `csqtt://` line has no name, so proxy apps show "csqtt [host]". The plugin appends the inbound's remark as the name
-(`#<remark>`), choosing the inbound by the line's `peer` port (or the only CSQTT inbound there is). The sealed `csqtt://<base64>` lines of newer panels carry no readable port, so they are named after the only CSQTT inbound. A line that already has a name is left alone.
+The panel names no CSQTT or OpenFlux line, so the subscription page would call them "Link N". The plugin tells the page what to call
+them (the remark of their inbound) in a separate list next to the links. **The lines themselves are never changed**: the CSQTT app
+reads everything after `csqtt://` as the sealed payload, so a `#name` made it drop the link (better-lucx 1.3.1 and 1.3.2 did add one;
+1.4.1 does not). A proxy client shows such a profile under the name it makes up itself.
 
 ## The subscription page
 

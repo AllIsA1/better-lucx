@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -28,6 +29,9 @@ const (
 type fixer struct {
 	*cachedMap
 	api panelAPI
+
+	namesMu sync.Mutex
+	names   map[string]string // OpenFlux link -> the remark of its inbound, for the page
 }
 
 func newFixer(api panelAPI) *fixer {
@@ -36,11 +40,22 @@ func newFixer(api panelAPI) *fixer {
 	return f
 }
 
+// nameOf is the remark of the OpenFlux inbound a link comes from, for the page of a browser.
+func (f *fixer) nameOf(line string) string {
+	if !strings.HasPrefix(strings.TrimSpace(line), linkPrefix) {
+		return ""
+	}
+	f.namesMu.Lock()
+	defer f.namesMu.Unlock()
+	return f.names[strings.TrimSpace(line)]
+}
+
 // onSeam is the seam with this module alone (the plugin itself runs all modules through subscriptionSeam).
 func (f *fixer) onSeam(c SeamCall) (SeamReply, error) { return subscriptionSeam(c, f) }
 
 type inboundInfo struct {
 	ID             int    `json:"id"`
+	Remark         string `json:"remark"`
 	Protocol       string `json:"protocol"`
 	Enable         bool   `json:"enable"`
 	ExcludeFromSub bool   `json:"excludeFromSub"`
@@ -72,11 +87,19 @@ func (f *fixer) load(ctx context.Context) (map[string][]string, error) {
 		return nil, err
 	}
 	open := map[int]bool{}
+	remarkOf := map[int]string{}
 	for _, ib := range inbounds {
 		if ib.Protocol == "openflux" && ib.Enable && !ib.ExcludeFromSub {
 			open[ib.ID] = true
+			remarkOf[ib.ID] = strings.TrimSpace(ib.Remark)
 		}
 	}
+	names := map[string]string{}
+	defer func() {
+		f.namesMu.Lock()
+		f.names = names
+		f.namesMu.Unlock()
+	}()
 	data := map[string][]string{}
 	if len(open) == 0 {
 		return data, nil
@@ -114,6 +137,9 @@ func (f *fixer) load(ctx context.Context) (map[string][]string, error) {
 				for _, l := range all {
 					if strings.HasPrefix(l, linkPrefix) {
 						links = append(links, l)
+						if remarkOf[id] != "" {
+							names[l] = remarkOf[id]
+						}
 					}
 				}
 				linkOf[id] = links
