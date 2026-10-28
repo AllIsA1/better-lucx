@@ -19,21 +19,6 @@ type subModule interface {
 	apply(subID string, lines []string) []string
 }
 
-// appendMissing adds the lines that are not there yet at the end.
-func appendMissing(lines, extra []string) []string {
-	present := make(map[string]bool, len(lines)+len(extra))
-	for _, l := range lines {
-		present[strings.TrimSpace(l)] = true
-	}
-	for _, l := range extra {
-		if !present[l] {
-			present[l] = true
-			lines = append(lines, l)
-		}
-	}
-	return lines
-}
-
 // namer tells the page of a browser what to call a link the panel gives no name (the name is not put in the
 // link: some apps read the whole line after the scheme and drop a link that carries a #name).
 type namer interface {

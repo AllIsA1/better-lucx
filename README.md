@@ -1,38 +1,21 @@
 # better-lucx
 
-Improvements for the [LucX-UI](https://github.com/AlexeyLCP/lucx-ui) subscription, as one plugin. Install it from the Plugins page
+Subscription extras for [LucX-UI](https://github.com/AlexeyLCP/lucx-ui) that the panel does not do itself, as one plugin. Install it from the Plugins page
 (it is in the signed catalog) or by pasting this repository's link.
 
-## OpenFlux in the subscription
+## What the panel does itself now (removed in 2.0.0)
 
-Since lucx.313 the panel puts the OpenFlux links into the subscription itself, so the plugin no longer does (better-lucx up to 1.4.2
-added them for older panels; it does not any more). It only tells the subscription page what to call them, see below. A panel older
-than lucx.313 needs better-lucx 1.4.2.
+These were parts of this plugin; the panel took them over, so they are gone from it:
 
-## Own links
-
-Links of any scheme that were added to clients with this plugin keep working: they are written into the client's subscription as
-before. The plugin has no sidebar page any more (better-lucx 1.4.3): the panel build `…-plugins.6` and later takes a link of any scheme in
-the client form itself (Clients → edit → Links), without any plugin, so that is where new links go. Links the plugin already holds are
-shown in the client form too (see below) and can be changed there.
-
-A link must be one line without spaces or control characters (it becomes one line of the subscription); a client can have up to 100.
-A client that is switched off, expired or out of traffic gets nothing, as in the panel. The name is added after `#` when the link has
-none (not for `vmess://`, which carries its name inside).
-
-The links are kept by the plugin, in its data directory (`links.json`), by the client's email: a client renamed in the panel loses its
-links, and when the panel moves to another server, move the plugin's data directory too.
-
-## Links of any scheme in the client form
-
-The client form of the panel (Clients → edit → Links) refuses every link whose scheme the panel does not know: `amneziawg://`, `yptun://`,
-`tuic://`, … With this plugin the form takes them. When the form is saved the plugin lifts the links of unknown schemes out of the request,
-lets the panel have the rest, and keeps those links itself (after the panel has said yes); when the form reads the client back the plugin
-puts them into the list again. They are written into the client's subscription like the links the plugin holds, with the
-remark as the name after `#`, switched off or ended links are not served. A link of a scheme the panel knows stays the panel's: it is
-checked by the panel and gets its own error message. A link that could damage the subscription (a space, a line break) is refused with
-the panel's usual kind of message. To read the client the plugin needs the right to take part in the answers of the clients API
-(`seam:api:clients`, shown as dangerous: the client's data passes through it; it only adds its own links).
+- **OpenFlux in the subscription**: the panel does it since lucx.313 (the plugin stopped adding them in 1.4.3).
+- **Links of any scheme for a client**: since lucx.323 ([#145](https://github.com/AlexeyLCP/lucx-ui/issues/145)) the client form of the panel
+  (Clients → edit → Links) takes any `scheme://…` link, so the plugin's own link store, its links-in-the-form seams and its page are removed.
+  **Links that were kept only by the plugin** (its `links.json` in the plugin's data directory, never deleted by the plugin) are no longer
+  written into the subscriptions: add them again in the client form. Older plugin versions' links are in the file for reference.
+- **A name for the olcRTC / CSQTT / qWDTT / OpenFlux line**: since lucx.324 ([#136](https://github.com/AlexeyLCP/lucx-ui/issues/136)) a stored
+  link, or an inbound's line of those protocols, may contain `$name`, which the panel turns into the name; the panel also no longer rewrites
+  the `#fragment` of such links. Put `$name` in the free-form part of the link where there is one (olcRTC: the meet URL). The sealed CSQTT and
+  OpenFlux links of the panel have no place for it, so the page names below stay.
 
 ## AmneziaWG link format
 
@@ -63,22 +46,20 @@ official CSQTT app never fetches a subscription, a person pastes a link into it,
 
 ## The subscription page
 
-What the plugin adds to the raw subscription (own links, the `amneziawg://` config line, CSQTT names) is added to the
+What the plugin adds to the raw subscription (the `amneziawg://` config line) is added to the
 list of links on the page a browser shows for the subscription too, so the page and the proxy client agree. The plugin changes only
 the list the panel embeds in the page (`window.__SUB_PAGE_DATA__`); a custom page theme that does not carry it is left as it is.
 
 ## What it does not do
 
 Only the usual subscription format (`/<sub path>/<subId>`) and its page are changed; JSON and Clash subscriptions and traffic accounting are not
-touched. Changes of clients (switched off, expiry) show up within about 30 seconds. Traffic of third-party links cannot be counted:
-it does not pass through the panel.
+touched. The inbounds the plugin reads (for the CSQTT and OpenFlux names) are refreshed about every 30 seconds.
 
 ## Safety
 
-It needs `seam:sub` (take part in subscription answers; shown as dangerous), read access to clients and inbounds, and a sidebar entry.
-It answers from memory (the panel is read in the background), so a subscription request is not slowed. Whenever it is off, slow or
-fails, the panel answers as it always did, and switching it off or on needs no restart. The page talks only to the plugin, and only
-the panel's administrator can change links.
+It needs `seam:sub` (take part in subscription answers; shown as dangerous) and read access to inbounds. It has no page and no sidebar
+entry. It answers from memory (the panel is read in the background), so a subscription request is not slowed. Whenever it is off, slow or
+fails, the panel answers as it always did, and switching it off or on needs no restart.
 
 The binaries in `bin/` are built with `make build` (static Linux, `amd64` and `arm64`); the panel downloads the repository as it is and
 does not compile anything. MIT licensed.

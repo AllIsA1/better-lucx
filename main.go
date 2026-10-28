@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"log"
-	"path/filepath"
 )
 
 func main() {
@@ -17,12 +16,8 @@ func main() {
 	} else {
 		api = p
 	}
-	store, err := openLinkStore(filepath.Join(StateDir(), "links.json"))
-	if err != nil {
-		log.Fatalf("better-lucx: %v", err)
-	}
 	log.Print("better-lucx plugin ready")
-	if err := Serve(newMux(api, newOpenfluxNames(api), newCustomLinks(api, store))); err != nil {
+	if err := Serve(newMux(api, newOpenfluxNames(api))); err != nil {
 		log.Fatal(err)
 	}
 }

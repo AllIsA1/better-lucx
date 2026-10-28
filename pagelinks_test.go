@@ -11,7 +11,19 @@ import (
 
 type addLines []string
 
-func (a addLines) apply(_ string, lines []string) []string { return appendMissing(lines, a) }
+func (a addLines) apply(_ string, lines []string) []string {
+	present := map[string]bool{}
+	for _, l := range lines {
+		present[strings.TrimSpace(l)] = true
+	}
+	for _, l := range a {
+		if !present[l] {
+			present[l] = true
+			lines = append(lines, l)
+		}
+	}
+	return lines
+}
 
 const pageHead = `<!doctype html><html><head><title>sub</title><script>window.X_UI_BASE_PATH="/";window.__SUB_PAGE_DATA__=`
 const pageTail = `;</script></head><body><div id="root"></div></body></html>`

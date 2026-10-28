@@ -1,9 +1,9 @@
 {
   "id": "better-lucx",
   "name": "Better LucX",
-  "version": "1.4.3",
+  "version": "2.0.0",
   "apiVersion": "1",
-  "description": "Improvements for LucX-UI subscriptions and clients: any third-party link of any scheme can be given to a client, in the client form too (the panel refuses schemes it does not know), and every AmneziaWG node also gets the amneziawg://<config> link INCY imports, and CSQTT links are given in the plain form proxy clients read. CSQTT and OpenFlux links get their inbound's remark as the name on the subscription page. Switch it off and the panel does what it always did.",
+  "description": "Subscription extras the panel does not do itself: every AmneziaWG node also gets the amneziawg://<config> link INCY imports (for every client), CSQTT links are given in the plain form proxy clients read, and CSQTT and OpenFlux links get their inbound's remark as the name on the subscription page. Links of any scheme in the client form, OpenFlux in the subscription and the $name macro are the panel's own now. Switch it off and the panel does what it always did.",
   "author": "AllIsA1",
   "license": "MIT",
   "type": "process",
@@ -13,8 +13,6 @@
   },
   "permissions": [
     "seam:sub",
-    "seam:api:clients",
-    "api:clients:read",
     "api:inbounds:read"
   ],
   "seams": [
@@ -25,30 +23,6 @@
         "GET"
       ],
       "route": "/links/:subid"
-    },
-    {
-      "engine": "api",
-      "mode": "before",
-      "methods": [
-        "POST"
-      ],
-      "route": "/clients/:email/externalLinks"
-    },
-    {
-      "engine": "api",
-      "mode": "after",
-      "methods": [
-        "POST"
-      ],
-      "route": "/clients/:email/externalLinks"
-    },
-    {
-      "engine": "api",
-      "mode": "after",
-      "methods": [
-        "GET"
-      ],
-      "route": "/clients/get/:email"
     }
   ]
 }

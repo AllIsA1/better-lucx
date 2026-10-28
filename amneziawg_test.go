@@ -222,21 +222,6 @@ func TestAConfigWithoutANameGivesALinkWithoutAFragment(t *testing.T) {
 	}
 }
 
-func TestTheOtherModulesStillAddTheirLinksAfterTheConversion(t *testing.T) {
-	r, c := customRig(t)
-	r.panel.clients = []map[string]any{client("alice", "subA", []int{1})}
-	c.store.add("alice", []newLink{{URL: "yptun://own"}})
-	vpn := amneziaVPN(t, named("mixed"))
-	reply, err := subscriptionSeam(call("subA", b64(legacyLine+"\n"+vpn), nil), awgFormat{}, c)
-	if err != nil {
-		t.Fatal(err)
-	}
-	lines := strings.Split(r.decoded(reply), "\n")
-	if len(lines) != 4 || lines[1] != vpn || !strings.HasPrefix(lines[2], "amneziawg://") && strings.HasSuffix(lines[2], "#mixed") || lines[3] != "yptun://own" {
-		t.Errorf("lines = %v", lines)
-	}
-}
-
 func packContainer(t *testing.T, env any) string {
 	t.Helper()
 	raw, _ := json.Marshal(env)
